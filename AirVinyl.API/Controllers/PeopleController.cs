@@ -86,7 +86,8 @@ namespace AirVinyl.API.Controllers
             }
 
             // return the collection
-            return Ok(_ctx.VinylRecords.Where(v => v.Person.PersonId == key));
+            return Ok(_ctx.VinylRecords.Include("DynamicVinylRecordProperties")
+                .Where(v => v.Person.PersonId == key));
         }
 
         [HttpGet]
@@ -101,8 +102,8 @@ namespace AirVinyl.API.Controllers
             }
 
             // queryable, no FirstOrDefault
-            var vinylRecords = _ctx.VinylRecords.Where(v => v.Person.PersonId == key
-            && v.VinylRecordId == vinylRecordKey);
+            var vinylRecords = _ctx.VinylRecords.Include("DynamicVinylRecordProperties")
+                .Where(v => v.Person.PersonId == key && v.VinylRecordId == vinylRecordKey);
 
             if (!vinylRecords.Any())
             {
@@ -160,9 +161,9 @@ namespace AirVinyl.API.Controllers
             }
 
             // find a matching vinyl record  
-            var currentVinylRecord = _ctx.VinylRecords
+            var currentVinylRecord = _ctx.VinylRecords.Include("DynamicVinylRecordProperties")
                 .FirstOrDefault(p => p.VinylRecordId == vinylRecordKey && p.Person.PersonId == key);
-            
+
             // return NotFound if the VinylRecord isn't found
             if (currentVinylRecord == null)
             {

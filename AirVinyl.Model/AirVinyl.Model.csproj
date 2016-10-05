@@ -70,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Address.cs" />
+    <Compile Include="DynamicProperty.cs" />
     <Compile Include="GenderEnum.cs" />
     <Compile Include="Person.cs" />
     <Compile Include="PressingDetail.cs" />

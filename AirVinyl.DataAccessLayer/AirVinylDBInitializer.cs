@@ -137,7 +137,11 @@ namespace AirVinyl.DataAccessLayer
                     Title = "Nevermind",
                     CatalogNumber = "ABC/111",
                     PressingDetail = pressingDetailAudiophileLP,
-                    Year= 1991
+                    Year= 1991,
+                    DynamicVinylRecordProperties = new List<DynamicProperty>()
+                    {
+                         new DynamicProperty() { Key = "Publisher", Value = "Geffen" }
+                    }
                 },
                 new VinylRecord()
                 {

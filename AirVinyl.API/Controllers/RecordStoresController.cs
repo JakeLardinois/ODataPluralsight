@@ -58,6 +58,69 @@ namespace AirVinyl.API.Controllers
             return this.CreateOKHttpActionResult(collectionPropertyValue);
         }
 
+        [HttpPost]
+        [ODataRoute("RecordStores")]
+        public IHttpActionResult CreateRecordStore(RecordStore recordStore)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // add the RecordStore
+            _ctx.RecordStores.Add(recordStore);
+            _ctx.SaveChanges();
+
+            // return the created RecordStore 
+            return Created(recordStore);
+        }
+
+        [HttpPatch]
+        [ODataRoute("RecordStores({key})")]
+        [ODataRoute("RecordStores({key})/AirVinyl.Model.SpecializedRecordStore")]
+        public IHttpActionResult UpdateRecordStorePartially([FromODataUri] int key, Delta<RecordStore> patch)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // find a matching record store
+            var currentRecordStore = _ctx.RecordStores.FirstOrDefault(p => p.RecordStoreId == key);
+
+            // if the record store isn't found, return NotFound
+            if (currentRecordStore == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(currentRecordStore);
+            _ctx.SaveChanges();
+
+            // return NoContent
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        [HttpDelete]
+        [ODataRoute("RecordStores({key})")]
+        [ODataRoute("RecordStores({key})/AirVinyl.Model.SpecializedRecordStore")]
+        public IHttpActionResult DeleteRecordStore([FromODataUri] int key)
+        {
+            var currentRecordStore = _ctx.RecordStores.Include("Ratings")
+                .FirstOrDefault(p => p.RecordStoreId == key);
+            if (currentRecordStore == null)
+            {
+                return NotFound();
+            }
+
+            currentRecordStore.Ratings.Clear();
+            _ctx.RecordStores.Remove(currentRecordStore);
+            _ctx.SaveChanges();
+
+            // return NoContent
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+        
         [HttpGet]
         [ODataRoute("RecordStores({key})/AirVinyl.Functions.IsHighRated(minimumRating={minimumRating})")]
         public bool IsHighRated([FromODataUri] int key, int minimumRating)
@@ -258,7 +321,43 @@ namespace AirVinyl.API.Controllers
                 return StatusCode(HttpStatusCode.InternalServerError);
             }
         }
-        
+
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("RecordStores/AirVinyl.Model.SpecializedRecordStore")]
+        public IHttpActionResult GetSpecializedRecordStores()
+        {
+            //var specializedStores = _ctx.RecordStores.Where(r => r is SpecializedRecordStore);
+            //return Ok(specializedStores);
+
+            // projection, required for filtering
+            var specializedStores = _ctx.RecordStores.Where(r => r is SpecializedRecordStore);
+            return Ok(specializedStores.Select(s => s as SpecializedRecordStore));
+        }
+
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("RecordStores({key})/AirVinyl.Model.SpecializedRecordStore")]
+        public IHttpActionResult GetSpecializedRecordStore([FromODataUri] int key)
+        {
+            var specializedStores = _ctx.RecordStores
+                .Where(r => r.RecordStoreId == key && r is SpecializedRecordStore);
+
+            if (!specializedStores.Any())
+            {
+                return NotFound();
+            }
+
+            // return the result
+            // return Ok(specializedStores.Single());
+
+            // If you want to enable queries on this, you should return
+            // an IQueryable result.  This should be used in combination with the
+            // EnableQuery attribute - if not, this will fail.
+            return Ok(SingleResult.Create(
+                specializedStores.Select(s => s as SpecializedRecordStore)));            
+        }
+
         protected override void Dispose(bool disposing)
         {
             // dispose the context

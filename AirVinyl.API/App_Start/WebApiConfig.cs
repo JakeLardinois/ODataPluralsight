@@ -1,6 +1,7 @@
 ﻿using AirVinyl.Model;
 using Microsoft.OData.Edm;
 using System.Web.Http;
+using System.Web.OData.Batch;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 
@@ -11,11 +12,18 @@ namespace AirVinyl.API
     {
         public static void Register(HttpConfiguration config)
         {         
+            //config.MapODataServiceRoute(
+            //    "ODataRoute",
+            //    "odata",
+            //    GetEdmModel());
+
+            // Batch support
             config.MapODataServiceRoute(
                 "ODataRoute",
                 "odata",
-                GetEdmModel());
-       
+                GetEdmModel(),
+                new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer));
+
             config.EnsureInitialized();
         }
 
