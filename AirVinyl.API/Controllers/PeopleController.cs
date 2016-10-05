@@ -89,6 +89,120 @@ namespace AirVinyl.API.Controllers
             return Ok(_ctx.VinylRecords.Where(v => v.Person.PersonId == key));
         }
 
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("People({key})/VinylRecords({vinylRecordKey})")]
+        public IHttpActionResult GetVinylRecordForPerson([FromODataUri] int key, [FromODataUri] int vinylRecordKey)
+        {
+            var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            if (person == null)
+            {
+                return NotFound();
+            }
+
+            // queryable, no FirstOrDefault
+            var vinylRecords = _ctx.VinylRecords.Where(v => v.Person.PersonId == key
+            && v.VinylRecordId == vinylRecordKey);
+
+            if (!vinylRecords.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(SingleResult.Create(vinylRecords));
+        }
+
+        [HttpPost]
+        [ODataRoute("People({key})/VinylRecords")]
+        public IHttpActionResult CreateVinylRecordForPerson([FromODataUri] int key,
+            VinylRecord vinylRecord)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // does the person exist?
+            var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            if (person == null)
+            {
+                return NotFound();
+            }
+
+            // link the person to the VinylRecord (also avoids an invalid person 
+            // key on the passed-in record - key from the URI wins)
+            vinylRecord.Person = person;
+
+            // add the VinylRecord
+            _ctx.VinylRecords.Add(vinylRecord);
+            _ctx.SaveChanges();
+
+            // return the created VinylRecord 
+            return Created(vinylRecord);
+        }
+
+        [HttpPatch]
+        [ODataRoute("People({key})/VinylRecords({vinylRecordKey})")]
+        public IHttpActionResult PartiallyUpdateVinylRecordForPerson([FromODataUri] int key,
+            [FromODataUri] int vinylRecordKey,
+            Delta<VinylRecord> patch)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // does the person exist?
+            var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            if (person == null)
+            {
+                return NotFound();
+            }
+
+            // find a matching vinyl record  
+            var currentVinylRecord = _ctx.VinylRecords
+                .FirstOrDefault(p => p.VinylRecordId == vinylRecordKey && p.Person.PersonId == key);
+            
+            // return NotFound if the VinylRecord isn't found
+            if (currentVinylRecord == null)
+            {
+                return NotFound();
+            }
+
+            // apply patch
+            patch.Patch(currentVinylRecord);
+            _ctx.SaveChanges();
+
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        [HttpDelete]
+        [ODataRoute("People({key})/VinylRecords({vinylRecordKey})")]
+        public IHttpActionResult DeleteVinylRecordForPerson([FromODataUri] int key,
+          [FromODataUri] int vinylRecordKey)
+        {
+            var currentPerson = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            if (currentPerson == null)
+            {
+                return NotFound();
+            }
+
+            // find a matching vinyl record  
+            var currentVinylRecord = _ctx.VinylRecords
+                .FirstOrDefault(p => p.VinylRecordId == vinylRecordKey && p.Person.PersonId == key);
+
+            if (currentVinylRecord == null)
+            {
+                return NotFound();
+            }
+
+            _ctx.VinylRecords.Remove(currentVinylRecord);
+            _ctx.SaveChanges();
+
+            // return No Content
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
         // GET odata/People('key')/Property
         [HttpGet]
         // id makes no sense, because we already have the key
