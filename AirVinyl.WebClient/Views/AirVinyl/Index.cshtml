@@ -1,0 +1,31 @@
+﻿@model AirVinyl.WebClient.Models.AirVinylViewModel
+
+@{
+    ViewBag.Title = "AirVinyl Client Application";
+}
+
+<h2>AirVinyl Client Application</h2>
+
+<h3>People List</h3>
+<ul>
+    @foreach (var person in Model.People)
+    {
+        <li>@person.PersonId, @person.FirstName @person.LastName, @person.Email</li>
+        <ul>
+            @foreach (var record in person.VinylRecords)
+            {
+                <li>@record.Artist, @record.Title</li>
+            }
+        </ul>
+    }
+</ul>
+<h3>Single Person</h3>
+
+@if (Model.Person != null)
+{
+<div>@Model.Person.PersonId, @Model.Person.FirstName @Model.Person.LastName, @Model.Person.Email</div>
+}
+
+<h3>Additional Data</h3>
+
+<div>@Model.AdditionalData</div>
