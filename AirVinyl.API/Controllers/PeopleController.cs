@@ -7,7 +7,6 @@ using System.Net;
 using System.Web.Http;
 using System.Web.OData;
 using System.Web.OData.Extensions;
-using System.Web.OData.Query;
 using System.Web.OData.Routing;
 
 namespace AirVinyl.API.Controllers
@@ -18,27 +17,41 @@ namespace AirVinyl.API.Controllers
         private AirVinylDbContext _ctx = new AirVinylDbContext();
         
         // GET odata/People
+        [EnableQuery(MaxExpansionDepth=3, MaxSkip=10, MaxTop=5, PageSize=4)]
         public IHttpActionResult Get()
         {
             return Ok(_ctx.People);
         } 
 
         // GET odata/People('key')
+        [EnableQuery]
         public IHttpActionResult Get([FromODataUri] int key)
         {
-            var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
-            if (person == null)
+            // queryable version
+            var people = _ctx.People.Where(p => p.PersonId == key);
+
+            if (!people.Any())
             {
                 return NotFound();
             }
 
-            return Ok(person);
+            return Ok(SingleResult.Create(people));
+
+            // non-queryable version
+            //var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            //if (person == null)
+            //{
+            //    return NotFound();
+            //}
+
+            //return Ok(person);
         }
         
         // Getting a collection property
         [HttpGet]
+        [EnableQuery]
         [ODataRoute("People({key})/Friends")]
-        [ODataRoute("People({key})/VinylRecords")]
+       // [ODataRoute("People({key})/VinylRecords")]
         public IHttpActionResult GetPersonCollectionProperty([FromODataUri] int key)
         {
             var collectionPropertyToGet = Url.Request.RequestUri.Segments.Last();
@@ -59,6 +72,21 @@ namespace AirVinyl.API.Controllers
 
             // return the collection
             return this.CreateOKHttpActionResult(collectionPropertyValue);
+        }
+
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("People({key})/VinylRecords")]
+        public IHttpActionResult GetVinylRecordsForPerson([FromODataUri] int key)
+        {
+            var person = _ctx.People.FirstOrDefault(p => p.PersonId == key);
+            if (person == null)
+            {
+                return NotFound();
+            }
+
+            // return the collection
+            return Ok(_ctx.VinylRecords.Where(v => v.Person.PersonId == key));
         }
 
         // GET odata/People('key')/Property
@@ -232,7 +260,7 @@ namespace AirVinyl.API.Controllers
 
             // apply the changeset to the matching person
             patch.Patch(currentPerson);
-            _ctx.SaveChanges();         
+            _ctx.SaveChanges();
 
             return StatusCode(HttpStatusCode.NoContent);
         }
@@ -346,19 +374,19 @@ namespace AirVinyl.API.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
-             
+
         // DELETE odata/People('key')/Friends/$ref?$id={'relatedUriWithRelatedKey'}
         [HttpDelete]
         [ODataRoute("People({key})/Friends({relatedKey})/$ref")]
         public IHttpActionResult DeleteLinkToFriend([FromODataUri] int key, [FromODataUri] int relatedKey)
-        {        
+        {
             // get the current person, including friends as we need to check those
             var currentPerson = _ctx.People.Include("Friends").FirstOrDefault(p => p.PersonId == key);
             if (currentPerson == null)
             {
                 return NotFound();
             }
-        
+
             var friend = currentPerson.Friends.FirstOrDefault(item => item.PersonId == relatedKey);
             if (friend == null)
             {
@@ -370,7 +398,7 @@ namespace AirVinyl.API.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
-        
+
         protected override void Dispose(bool disposing)
         {
             // dispose the context
